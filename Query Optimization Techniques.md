@@ -173,7 +173,7 @@ Where R have (ID, name, sal, dob)
 - If there is a clustering index on grouping attribute then groups are already together -> no sorting needed -> GROUP BY becomes much faster.
 - Clustering index → Already grouped
 
-# Condition Selectivity (sl)
+# Selectivity (sl)
 
 - Selectivity = **the fraction (percentage) of records that satisfy a condition**.
 - It is always between **0 and 1**.
@@ -201,6 +201,11 @@ Where R have (ID, name, sal, dob)
 ## Why does the optimizer need selectivity?
 
 - Because before performing a selection, the DBMS estimates: Result size = sₗ × Relation Size
+
+## Selection Cardinality 
+
+- Average number of records satisfying an equality condition
+- s = sl x r = r/d
 
 # Algorithms for Join Operations
 
@@ -289,6 +294,7 @@ Where R have (ID, name, sal, dob)
 	- Equivalent = same result set
 	- Better = lower cost (disk I/O, CPU, memory, communication)
 
+![Image](Imgs/Pasted%20image%2020251117220222.png)
 # Heuristic Optimization
 
 - Rules for ordering the operations in query optimization.
@@ -301,7 +307,7 @@ Where R have (ID, name, sal, dob)
      2. Moving SELECT operations down the query tree. (early in RA)
      3. Applying the more restrictive SELECT operation first.
      4. Replacing CARTESIAN PRODUCT and SELECT with JOIN operations
-     5. Moving PROJECT operations down the query tree. (early in RA) 
+     5. Moving PROJECT operations down the query tree. (early in RA)
 
 ## RA Transformation Rules
 
@@ -314,6 +320,143 @@ Where R have (ID, name, sal, dob)
 7. Commuting π with ⨝ (or x): πL (R⨝C S ) ≡ (πA1, ..., An(R)) ⨝C (πB1, ..., Bm(S))
 8. Commutativity of set operations: The set operations υ and ∩ are commutative but “–” is not
 9. Converting a (σ, x) sequence into ⨝: (σC (R x S)) = (R ⨝C S)
+
+- We apply heuristics first to quickly reduce the size of intermediate results and produce a simpler, more efficient query tree, so that cost-based optimization can evaluate far fewer plans.
 # Cost Estimation
 
 - It estimates cost of different execution strategies and chooses the execution plan with lowest execution cost
+- Cost Components;
+     - I/O - Blocks
+     - Storage - MB/GB
+     - CPU- Operations
+     - RAM - Buffers
+     - Communication - Data Transferred
+
+## Catalog Information (Metadata)
+
+### Column Metadata
+
+- These are statistics about **attributes**.
+
+1. Distinct values (d): How many unique values the column has.
+2. Selectivity (sl): Probability that a condition returns true.
+3. Selection cardinality(ٍs): How many **actual rows** will satisfy the condition.
+
+### Table Metadata
+
+- Statistics about the **entire relation**.
+
+1. Number of records (r)
+2. Average record size (R): Used to compute number of blocks.
+3. Number of file blocks (b): b= [r/blocking factor]
+4. Blocking factor (bfr)
+5. Primary file organization (Ordered/unordered)
+6. Indexes (Primary, secondary, clustering)
+7. histogram: Advanced selectivity estimation.
+
+### Index Metadata
+
+- Needed for index lookup cost.
+
+1. Number of levels in multi-level index (x)
+2. First-level index blocks (bᵢ₁)
+
+
+- Several algorithms can reduce disk IO by using extra buffer space
+- Amount of real memory available to buffer depends on other concurrent queries and OS processes, known only during execution
+- We often use worst case estimates, assuming only the minimum amount of memory needed for the operation is available
+- **Cost = Disk Access** , In Query Processing, the **main cost** the optimizer cares about is:
+	- Number of blocks read
+	- Number of blocks written (usually ignored unless needed)
+- Why blocks?
+	- Because disk I/O is **much slower** than CPU or memory. So the optimizer focuses on minimizing **block accesses**.
+- General Cost Formula: cost of finding the first block + Reading all blocks with matching records
+
+## Selection Cost Estimation
+
+### S1: Linear Search
+
+- Scan the data file, block by block looking for records satisfying the comparison.
+- Worst Case Cost = b
+- Best Case Cost = 1
+- Average Case Cost = b/2
+
+### S2: Binary Search
+
+- Navigate the data file using binary search to locate the data block.
+- Relation must be sorted
+- Cost of finding the first needed block = Log b
+- Cost of finding all needed blocks = log b + [s/bfr] -1
+     - log b -> Cost of finding the first needed block
+     - s/bfr -> how many blocks does the required selection satisfy. Ex: s = 4, bfr =2, s/bfr = 2
+     - -1 to subtract the first block we got as it already included in the [s/bfr] part
+- Cost of Equality on key = log b
+- Cost of Equality on non-key =  log b + [s/bfr] -1
+
+### S3a: Primary Index
+
+- Navigate the index to locate the index record with the comparison value.
+- Cost = x+1
+
+### S4: Ordering index with nonequality
+
+- Navigate the index to locate the data block with the corresponding equality condition then retrieve preceding or subsequent records. 
+- Cost = x + b/2
+
+### S5: Clustering index
+
+- Navigate the index to locate the first data block satisfying the condition and then retrieve subsequent blocks.
+- Cost = x + [s/bfr]
+
+### S6: Secondary Index (B-Tree)
+
+- Navigate the index to locate the index record with the comparison value.
+- Cost of index on key = x + 1
+- Cost of index on non-key: x+1+s
+- Cost of Non-equality comparison: x+(bi1/2)+(r/2)
+
+## Join Cost Estimation
+
+- The most time consuming operation in query processing
+- nB Number of available memory blocks
+- xB Number of index levels on attribute B of inner table
+- sb Selection cardinality for the attribute B of inner table
+- bfrRS The blocking factor of the result
+- What is the problem about join?
+	- The result should be stored, and other operations may be done on it. ”Intermediate Results”
+
+### Join Selectivity (js)
+
+- This measures **how many tuples survive the join** relative to the worst-case (Cartesian product).
+- js=| R⋈(A=B)​S | ​/ | R×S |
+	- Numerator = **size of the join result**
+	- Denominator = **size of the Cartesian product**
+	- 0 ≤ js ≤ 1
+- No join condition → Cartesian product -> js = 1
+- No matching tuples -> js = 0
+	- js close to 0 → join filters heavily
+	- js close to 1 → join behaves like a Cartesian product
+
+### Nested Loop Join (J1)
+
+- Factors affecting JOIN performance
+	- Choice of inner VS outer relation: Outer is the smaller relation
+	- Available buffer space: Assume memory buffer Mbuff [outer,inner, result]
+		- 1 buffer is always needed for the **outer relation**
+		- 1 buffer is always needed for the **inner relation**
+		- 1 buffer is needed for the **result**
+- cost = reading blocks of R + reading blocks of S according to R + writing the resulting blocks = bR + [[BR/nb-2] x bS ]+ ((js x R|x|S|)/bfrRS). Why **Buffers - 2** ?
+	- 1 buffer must hold the output
+	- 1 buffer must hold the inner relation’s block
+	- So the remaining buffers (Buffers - 2) are used to hold the **outer relation** blocks at once.
+
+### Single-loop Join (J2)
+
+- Cost = bR + Index cost+ ((js x |R|x|S|)/bfrRS)
+	- Primary Index: bR + (|R|x(xB+1))+ (js x |R|x|S|)/bfrRS)
+	- Clustering Index: bR + (|R|x(xB+(sB/bfrB)) + ((js x |R|x|S|)/bfrRS)
+	- Secondary Index: bR + (|R|x(xB+1+sB)) + ((js x |R|x|S|)/bfrRS)
+
+### Sort-Merge Join (J3)
+
+- Cost = bR + bS + ((js x |R|x|S|)/bfrRS)
