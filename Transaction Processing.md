@@ -212,7 +212,7 @@
 
 ### Strict Schedule
 
-- A schedule S is strict iff
+- A schedule S is strict if and only if
 	- All transactions read/write only items that were written by committed/aborted transaction. (T1 must commit or abort before T2 reads/writes X)
 
 - Strict Test:
@@ -266,11 +266,26 @@
 - A graph consists of nodes and edges
 - Serialization Graph Construction
 	1. Create a node, for each transaction.
-	2. Create an edge (T1 →T2) if there is w1(x) before r2(x)
-	3. Create an edge (T1 →T2) if there is r1(x) before w2(x)
-	4. Create an edge (T1 →T2) if there is w1(x) before w2(x)
+	2. Create an edge (`T1` →`T2`) if there is `w1(x)` before `r2(x)`
+	3. Create an edge (`T1` →`T2`) if there is `r1(x)` before `w2(x)`
+	4. Create an edge (`T1` →`T2`) if there is `w1(x)` before `w2(x)`
 
-- Schedule S is conflict-serializable, iff the serialization graph has no cycles. between each pair
+- Schedule `S` is conflict-serializable, if and only if the serialization graph has no cycles. between each pair
+
+- How To Check Serializability?
+    -  We check serializability by serialization (precedence) graph
+
+- **Check serializability** → after the schedule exists
+- **Enforce serializability** → while transactions are executing, So enforcement means: Prevent non-serializable schedules from happening in the first place
+- If transactions run concurrently, what causes non-serializability?
+    - Conflicting operations (RW, WR, WW), So to enforce serializability, the DBMS must **control conflicting operations**.
+- How do we Enforce Serializability?
+    -  Serializability is enforced using **Concurrency Control Techniques**, mainly:
+        1.  **Locking protocols** Especially **Two-Phase Locking** (2PL)
+        2. **Timestamp Ordering protocols**
+            - Assign timestamps to transactions
+            - Force conflicting operations to follow timestamp order
+            Result: Only schedules equivalent to a serial order are allowed
 ## Transaction Processer (Scheduler)
 
 - Forces the order of operations execution to guarantee certain schedule type, Mostly, serializable schedule
