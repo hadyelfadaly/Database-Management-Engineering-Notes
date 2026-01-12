@@ -306,6 +306,12 @@ Where R have (ID, name, sal, dob)
      1. Initial (canonical) query tree for SQL query Q.
      2. Moving SELECT operations down the query tree. (early in RA)
      3. Applying the more restrictive SELECT operation first.
+         - From most restrictive → least restrictive:
+	         1.  **Key / Primary key equality** `σ(id = 5)` -> Returns at most 1 tuple
+	         2. **Unique attribute equality** `σ(email = 'x@x.com')`
+	         3. **Equality on non-key attribute**`σ(department = 'CS')`
+	         4. **Range condition** `σ(salary > 5000)`
+	         5. **Inequality / LIKE / NOT** `σ(name LIKE '%a%')`
      4. Replacing CARTESIAN PRODUCT and SELECT with JOIN operations
      5. Moving PROJECT operations down the query tree. (early in RA)
 

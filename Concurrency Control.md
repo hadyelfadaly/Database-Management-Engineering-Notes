@@ -283,6 +283,9 @@ Basic 2PL prevents lost updates and unrepeatable reads but does not prevent dirt
 - Avoid Transactions that have performed many updates.
 - Select Younger Transactions, ones that most likely performed less updates.
 
+- First rule: **Victim must be in the deadlock cycle**
+- Second rule: **Choose the cheaper / younger transaction**
+
 #### Deadlock Detection & Resolution
 
 If a transaction waits for a time longer than a system-defined timeout threshold, the system assumes that the transaction may be deadlocked and aborts it.

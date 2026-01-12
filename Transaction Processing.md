@@ -185,7 +185,7 @@
 
 ### Recoverable Schedules
 
-- A schedule S is recoverable iff
+- A schedule S is recoverable if and only if:
 	- No transaction T in S commits until all transactions T’ that have written some item X that T reads have committed.
 	- Example: T1 writes X and T2 reads X, T2 Must wait for T1 to commit first, if T1 aborts, then T2 must abort and rollback too otherwise we fall into dirt read problem again
 
@@ -201,7 +201,7 @@
 
 ### Cascadeless Schedules (avoid cascading abort)
 
-- A schedule S is cascadeless iff:
+- A schedule S is cascadeless if and only if:
 	- All transactions read only items that were written by committed transaction. (T1 must commit before T2 reads X) 
 
 - Avoidance of Cascading Abort Test:
@@ -212,7 +212,7 @@
 
 ### Strict Schedule
 
-- A schedule S is strict if and only if
+- A schedule S is strict if and only if:
 	- All transactions read/write only items that were written by committed/aborted transaction. (T1 must commit or abort before T2 reads/writes X)
 
 - Strict Test:
